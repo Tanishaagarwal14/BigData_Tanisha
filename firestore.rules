@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: customers
+    // Document ID: customerId
+    // Fields:
+    //   - id: string (required)
+    //   - email: string (required, email format)
+    //   - lastPurchaseDate: string (required, ISO 8601)
+    //   - riskScore: number (required, 0-100)
+    //   - isAtRisk: boolean (required)
+    //   - lastReviewSentiment: string (optional, enum)
+    //   - secondLastReviewSentiment: string (optional, enum)
+    //
+    // Collection: reviews
+    // Document ID: reviewId
+    // Fields:
+    //   - id: string (required)
+    //   - customerId: string (required)
+    //   - text: string (required)
+    //   - sentiment: string (required, enum: Positive, Neutral, Negative)
+    //   - date: string (required, ISO 8601)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "evolvelogicai@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidCustomer(data) {
+      return hasOnlyAllowedFields(data, ['id', 'email', 'lastPurchaseDate', 'riskScore', 'isAtRisk', 'lastReviewSentiment', 'secondLastReviewSentiment']) &&
+             data.id is string && data.id.size() > 0 &&
+             isValidEmail(data.email) &&
+             data.riskScore is number && data.riskScore >= 0 && data.riskScore <= 100 &&
+             data.isAtRisk is bool;
+    }
+
+    function isValidReview(data) {
+      return hasOnlyAllowedFields(data, ['id', 'customerId', 'text', 'sentiment', 'date']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.customerId is string && data.customerId.size() > 0 &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 5000 &&
+             data.sentiment in ['Positive', 'Neutral', 'Negative'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /customers/{customerId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidCustomer(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidReview(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}

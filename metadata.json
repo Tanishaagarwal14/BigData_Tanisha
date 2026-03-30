@@ -1,0 +1,5 @@
+{
+  "name": "E-commerce Sentiment & Churn Dashboard",
+  "description": "A full-stack dashboard for e-commerce sentiment analysis and churn risk detection using Gemini AI and Firebase.",
+  "requestFramePermissions": []
+}

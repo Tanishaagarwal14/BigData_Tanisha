@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "Customer": {
+      "title": "Customer",
+      "description": "Represents an e-commerce customer and their churn risk status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Customer ID" },
+        "email": { "type": "string", "format": "email", "description": "Customer email address" },
+        "lastPurchaseDate": { "type": "string", "format": "date-time", "description": "Date of the last purchase" },
+        "riskScore": { "type": "number", "description": "Calculated churn risk score" },
+        "isAtRisk": { "type": "boolean", "description": "Whether the customer is considered at high risk of churning" },
+        "lastReviewSentiment": { "type": "string", "description": "Sentiment of the most recent review" },
+        "secondLastReviewSentiment": { "type": "string", "description": "Sentiment of the second most recent review" }
+      },
+      "required": ["id", "email", "lastPurchaseDate"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A customer review with sentiment analysis.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Review ID" },
+        "customerId": { "type": "string", "description": "ID of the customer who wrote the review" },
+        "text": { "type": "string", "description": "The review text" },
+        "sentiment": { "type": "string", "enum": ["Positive", "Neutral", "Negative"], "description": "Sentiment label" },
+        "date": { "type": "string", "format": "date-time", "description": "Date the review was written" }
+      },
+      "required": ["customerId", "text", "sentiment", "date"]
+    }
+  },
+  "firestore": {
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Collection of customer risk profiles."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Collection of all customer reviews."
+    }
+  }
+}
